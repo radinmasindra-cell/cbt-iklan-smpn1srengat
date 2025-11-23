@@ -1,2 +1,294 @@
-<h2>CBT IKLAN SMP</h2>
-<p>Halaman sementara.</p>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CBT - Teks Iklan (Kelas 8)</title>
+<style>
+  :root{--primary:#60a5fa;--primary-dark:#3f8ae0;--bg:#eaf6ff}
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  body{margin:0;background:var(--bg);color:#0f172a}
+  header{background:var(--primary);color:#fff;padding:18px;text-align:center}
+  header img{width:88px;height:88px;border-radius:8px;display:block;margin:0 auto 8px}
+  .wrap{max-width:900px;margin:18px auto;padding:16px}
+  .card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+  input[type=text],input[type=number]{width:100%;padding:10px;border-radius:8px;border:1px solid #dbeafe;margin-bottom:10px}
+  button{background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer}
+  button.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+  .small{font-size:13px;color:#6b7280}
+  .hidden{display:none}
+  .question{padding:12px;border-radius:8px;border:1px solid #e6f2ff;margin-top:12px}
+  .choices{display:grid;gap:8px;margin-top:8px}
+  .choice{padding:10px;background:#f8fbff;border-radius:8px;border:1px solid #e6f2ff;cursor:pointer}
+  .progress{height:10px;background:#eef6ff;border-radius:999px;overflow:hidden;margin-top:8px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),#93c5fd);width:0%}
+  footer{font-size:13px;color:#6b7280;margin-top:10px;text-align:center}
+  @media(max-width:640px){header h1{font-size:18px}}
+</style>
+</head>
+<body>
+
+<header>
+  <!-- Logo sekolah (ditampilkan di halaman token masuk saja) -->
+  <img id="schoolLogo" src="/mnt/data/LOGO SMP SRENGAT1.png" alt="Logo Sekolah (ditampilkan pada token)">
+  <h1 style="margin:6px 0 0">Ulangan Harian — Bahasa Indonesia</h1>
+  <div class="small">Materi: Teks Iklan, Slogan, dan Poster • Kelas 8 • SMP Negeri Contoh</div>
+</header>
+
+<div class="wrap">
+
+  <!-- SETUP / TOKEN -->
+  <section id="setup" class="card">
+    <h2 style="margin:0 0 8px">Masukkan Token Ujian</h2>
+    <div class="small">Masukkan token untuk memulai (Token: <strong>IKLAN</strong>)</div>
+    <input id="tokenInput" type="text" placeholder="Masukkan token ujian">
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="checkTokenBtn">Mulai Ujian</button>
+      <button id="previewBtn" class="secondary">Pratinjau Soal</button>
+    </div>
+
+    <div class="small" style="margin-top:12px">
+      Petunjuk singkat:
+      <ol>
+        <li>Siapkan nama, kelas, dan nomor ujian saat diminta.</li>
+        <li>Jika token benar, logo dan petunjuk ini akan hilang dan ujian dimulai.</li>
+        <li>Tekan ESC untuk mengakhiri ujian (akan muncul konfirmasi).</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- EXAM AREA -->
+  <section id="examArea" class="card hidden" aria-hidden="true">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="small">Peserta: <span id="labelName">-</span></div>
+        <div class="small">Soal <span id="curIdx">1</span> / <span id="totalQ">45</span></div>
+      </div>
+      <div style="text-align:right">
+        <div class="small">Sisa waktu: <span id="timer">--:--</span></div>
+        <div class="progress" style="width:220px"><i id="progBar"></i></div>
+      </div>
+    </div>
+
+    <div id="identitas" style="margin-top:12px">
+      <h3 style="margin:6px 0">Identitas Peserta</h3>
+      <input id="nama" type="text" placeholder="Nama lengkap">
+      <input id="kelas" type="text" placeholder="Kelas (mis: VIII-1)">
+      <input id="nomor" type="text" placeholder="Nomor Ujian">
+    </div>
+
+    <div id="questionBox" style="margin-top:12px"></div>
+
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="prevBtn" class="secondary">Sebelumnya</button>
+      <button id="nextBtn">Selanjutnya</button>
+      <button id="submitBtn" style="margin-left:auto;background:#10b981">Kumpulkan</button>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="resultArea" class="card hidden" aria-hidden="true">
+    <h3>Hasil Ujian</h3>
+    <div id="scoreBox" class="small"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button id="downloadCsv">Unduh (CSV)</button>
+      <button id="kirimServerBtn">Kirim Nilai ke Guru</button>
+      <button id="reviewBtn" class="secondary">Tinjau Jawaban</button>
+    </div>
+  </section>
+
+  <footer>CBT ini bersifat statis — upload ke GitHub Pages untuk akses siswa melalui link.</footer>
+</div>
+
+<script>
+/* ========== Konfigurasi ========== */
+const TOKEN = "IKLAN";
+const GOOGLE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwPWOUPOo7an_B9sv5hEMSC7CEItRBUmSI9HpYA6Ce4pwv0zNLxlKOk6enHVq4IYi4X/exec";
+
+/* ========== Soal (gunakan draf Anda) ========== */
+/* Berikut contoh 45 soal (gunakan array ini atau ganti sesuai draf lengkap Anda).
+   Format: { q: "teks soal", choices:[...], correct: indeks (0-based), img: optional image path or dataURL } */
+const QUESTIONS = [
+  {q:"1. Tujuan utama sebuah iklan adalah…", choices:["Menghibur","Mengajak atau membujuk pembaca","Menambah keindahan bahasa","Menyampaikan keluhan"], correct:1},
+  {q:"2. Ciri bahasa iklan adalah…", choices:["Panjang dan bertele-tele","Formal dan kaku","Singkat, jelas, dan persuasif","Mengandung banyak majas"], correct:2},
+  {q:"3. Kalimat pendek yang menarik perhatian pada iklan disebut…", choices:["Deskripsi","Headline","Narasi","Kesimpulan"], correct:1},
+  {q:"4. Slogan umumnya berbentuk…", choices:["Paragraf panjang","Pertanyaan retoris","Kalimat singkat dan mudah diingat","Dialog"], correct:2},
+  {q:"5. Poster bertujuan untuk…", choices:["Hiasan dinding saja","Menyampaikan pesan secara visual dan menarik","Menghasilkan karya seni murni","Menghibur pembaca"], correct:1},
+  {q:"6. Unsur penting pada poster adalah…", choices:["Foto buram","Warna mencolok dan tulisan jelas","Teks panjang","Ilustrasi kecil dan tidak jelas"], correct:1},
+  {q:"7. Iklan layanan masyarakat bersifat…", choices:["Mengajak untuk membeli produk","Membantu pemilik usaha","Mengajak masyarakat melakukan tindakan positif","Menyuruh menonton acara TV"], correct:2},
+  {q:"8. 'Ayo makan sayur setiap hari!' termasuk jenis…", choices:["Slogan pendidikan","Slogan kesehatan","Slogan ekonomi","Slogan sosial"], correct:1},
+  {q:"9. Contoh bahasa persuasif adalah…", choices:["Sepertinya kamu harus mencoba.","Belilah sekarang juga!","Mungkin produk ini bagus.","Barang ini biasa saja."], correct:1},
+  {q:"10. Iklan elektronik disebarkan melalui…", choices:["Koran","Internet dan televisi","Poster jalan","Majalah cetak"], correct:1},
+  {q:"11. Poster yang baik tidak menggunakan…", choices:["Teks singkat","Gambar pendukung","Warna kontras","Tulisan terlalu kecil"], correct:3},
+  {q:"12. Informasi rinci dalam iklan biasa terdapat pada…", choices:["Headline","Body copy","Ilustrasi","Penutup"], correct:1},
+  {q:"13. Kalimat 'Jangan buang sampah sembarangan!' merupakan…", choices:["Larangan","Persuasi","Testimoni","Saran"], correct:0},
+  {q:"14. Poster kampanye sekolah biasanya menyampaikan…", choices:["Harga produk","Info kegiatan atau ajakan positif","Pesan pribadi","Cerita naratif"], correct:1},
+  {q:"15. Slogan biasanya digunakan untuk…", choices:["Iklan niaga","Iklan layanan masyarakat","Pengumuman kecil","Daftar produk"], correct:1},
+  {q:"16. 'Belajar hari ini, sukses esok hari!' termasuk slogan…", choices:["Kesehatan","Pendidikan","Lingkungan","Ekonomi"], correct:1},
+  {q:"17. Fungsi gambar pada poster adalah…", choices:["Menggantikan semua teks","Menambah estetika","Menjelaskan pesan utama","Mengisi ruang kosong"], correct:2},
+  {q:"18. Iklan dinyatakan efektif jika…", choices:["Banyak teksnya","Pembaca mengabaikannya","Membujuk sesuai tujuan","Menggunakan bahasa sulit"], correct:2},
+  {q:"19. Iklan produk minuman biasanya menonjolkan…", choices:["Harga mahal","Rasa segar dan manfaat","Cara membuat minuman","Panjang sejarah perusahaan"], correct:1},
+  {q:"20. Poster yang terlalu penuh teks akan…", choices:["Lebih menarik","Sulit dibaca","Mudah dipahami","Efektif"], correct:1},
+  {q:"21. Tujuan slogan 'Hemat Energi, Selamatkan Bumi!' adalah…", choices:["Mengajak menjaga lingkungan","Menjual produk","Mengiklankan listrik","Mengkritik pemerintah"], correct:0},
+  {q:"22. Poster kegiatan biasanya memuat…", choices:["Testimoni","Jadwal, tempat, dan ajakan hadir","Harga barang","Narasi panjang"], correct:1},
+  {q:"23. Bahasa poster harus…", choices:["Indah dan panjang","Rumit","Mudah dibaca","Menggunakan kalimat majemuk banyak"], correct:2},
+  {q:"24. Iklan media cetak ditampilkan melalui…", choices:["Video","Suara","Teks dan gambar","Animasi"], correct:2},
+  {q:"25. Poster larangan bertujuan…", choices:["Mengajak membeli produk","Melarang perilaku tertentu","Menggambarkan cerita","Mengiklankan jasa"], correct:1},
+  {q:"26. Kalimat 'Segar! Nikmat! Bikin Semangat!' termasuk…", choices:["Deskripsi","Slogan produk minuman","Peringatan","Informasi formal"], correct:1},
+  {q:"27. Poster yang efektif memadukan…", choices:["Gambar buram","Teks banyak","Gambar & teks seimbang","Warna gelap saja"], correct:2},
+  {q:"28. Iklan yang menceritakan pengalaman pengguna disebut…", choices:["Testimoni","Imbauan","Larangan","Headline"], correct:0},
+  {q:"29. Dalam iklan, kelebihan produk biasanya ditampilkan pada…", choices:["Body copy","Headline","Penutup","Gambar"], correct:1},
+  {q:"30. Slogan 'Rajin Membaca, Banyak Ilmu!' termasuk slogan…", choices:["Ekonomi","Pendidikan","Sosial","Politik"], correct:1},
+  {q:"31. Poster layanan kesehatan biasanya berisi…", choices:["Harga obat","Ajakan hidup sehat","Cerita dokter","Info diskon"], correct:1},
+  {q:"32. Media paling cepat menyebarkan iklan adalah…", choices:["Majalah","TV","Media sosial","Poster jalan"], correct:2},
+  {q:"33. Poster tanpa gambar akan…", choices:["Lebih menarik","Kurang komunikatif","Lebih mudah dipahami","Lebih murah"], correct:1},
+  {q:"34. Slogan harus bersifat…", choices:["Menakutkan","Menghina","Mengajak positif","Mengancam"], correct:2},
+  {q:"35. Iklan efektif jika…", choices:["Pesannya jelas","Warnanya hitam putih semua","Tidak mencantumkan informasi","Teks terlalu panjang"], correct:0},
+  {q:"36. 'Ayo jaga kebersihan lingkungan sekolah!' adalah…", choices:["Slogan niaga","Poster seni","Imbauan","Testimoni"], correct:2},
+  {q:"37. Poster kegiatan sekolah biasanya memuat…", choices:["Harga makanan","Lokasi, waktu, dan ajakan hadir","Cerita panjang","Daftar sponsor"], correct:1},
+  {q:"38. Poster bahaya narkoba bertujuan…", choices:["Mengajak mencoba","Menghibur","Mencegah penyalahgunaan narkoba","Menjual obat"], correct:2},
+  {q:"39. Iklan produk biasanya memuat…", choices:["Keunggulan produk","Kritik pemerintah","Cerita panjang","Testimoni saja"], correct:0},
+  {q:"40. Poster yang memuat 'STOP Bullying!' bertujuan…", choices:["Mempromosikan bullying","Menghentikan tindakan bullying","Mengumumkan lomba","Menjual produk"], correct:1},
+  {q:"41. (Gambar) Ajakan membuang sampah pada tempatnya. Pesan utama poster tersebut adalah…", choices:["Sampah tidak perlu dibuang","Membiarkan lingkungan kotor","Ajakannya menjaga kebersihan","Mengurangi belanja"], correct:2, img:"/mnt/data/poster1.png"},
+  {q:"42. (Gambar) Iklan minuman. Pesan yang paling sesuai adalah…", choices:["Minuman ini biasa saja","Tidak dianjurkan","Menyegarkan dan memberi energi","Hanya untuk orang tertentu"], correct:2, img:"/mnt/data/poster2.png"},
+  {q:"43. (Gambar) Poster bahaya rokok. Tujuan poster tersebut adalah…", choices:["Mempromosikan rokok","Mengajak anak-anak merokok","Mengingatkan bahaya rokok bagi kesehatan","Membuat iklan rokok gratis"], correct:2, img:"/mnt/data/poster3.png"},
+  {q:"44. (Gambar) Iklan layanan masyarakat: demam berdarah. Kalimat imbauan yang sesuai adalah…", choices:["Biarkan nyamuk berkembang biak","Jangan bersih-bersih","Ayo cegah DBD dengan menjaga kebersihan!","Tidak perlu peduli lingkungan"], correct:2, img:"/mnt/data/poster4.png"},
+  {q:"45. (Gambar) Poster kegiatan sekolah: tujuan poster tersebut adalah…", choices:["Melarang siswa hadir","Mengumumkan kegiatan bazar sekolah","Menutup sekolah","Mengurangi siswa"], correct:1, img:"/mnt/data/poster5.png"}
+];
+
+/* ========== App state ========== */
+let state = { questions: [], index: 0, answers: {}, timerId: null, secondsLeft:0, student:'' };
+
+/* ========== Utility ========== */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]] } return a; }
+
+/* ========== Token check and start ========== */
+document.getElementById('checkTokenBtn').addEventListener('click', ()=>{
+  const t = document.getElementById('tokenInput').value.trim();
+  if(t !== TOKEN){ alert('Token salah!'); return; }
+  // hide setup, show exam area
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('examArea').classList.remove('hidden');
+  document.getElementById('schoolLogo').style.display = 'none'; // hide logo after token page
+  state.questions = QUESTIONS.slice(); // copy (optionally: shuffle(state.questions))
+  document.getElementById('totalQ').textContent = state.questions.length;
+  enterLockedMode();
+  renderQuestion();
+});
+
+/* ========== Locked Browser Mode ========= */
+function enterLockedMode(){
+  // attempt fullscreen
+  const el = document.documentElement;
+  if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  // disable opening new windows from script
+  window.open = function(){return null;};
+  // prevent context menu
+  document.addEventListener('contextmenu', e=>e.preventDefault());
+  // prevent common shortcuts
+  document.addEventListener('keydown', function(e){
+    const blocked = (e.ctrlKey && (e.key==='t' || e.key==='T' || e.key==='n' || e.key==='N' || e.key==='r' || e.key==='R' || e.key==='w' || e.key==='W')) || e.key==='F5' || e.key==='F12' || (e.ctrlKey && e.shiftKey && (e.key==='I' || e.key==='i'));
+    if(blocked){ e.preventDefault(); e.stopPropagation(); }
+    if(e.key==='Escape'){
+      e.preventDefault();
+      if(confirm('Anda menekan ESC — ini akan mengakhiri ujian dan mengumpulkan jawaban. Lanjutkan?')) finishExam();
+    }
+  }, true);
+  // prevent back nav
+  try{ history.pushState(null,null,location.href); window.addEventListener('popstate', ()=>{ history.pushState(null,null,location.href); }); }catch(e){}
+  // warn on close
+  window.addEventListener('beforeunload', e=>{ e.preventDefault(); e.returnValue=''; });
+}
+
+/* ========== Render question ========== */
+function renderQuestion(){
+  const q = state.questions[state.index];
+  document.getElementById('curIdx').textContent = state.index+1;
+  const box = document.getElementById('questionBox');
+  box.innerHTML = '';
+  const qDiv = document.createElement('div'); qDiv.className='question';
+  qDiv.innerHTML = `<div class="small">Soal ke-${state.index+1}</div><div style="margin-top:6px;font-weight:700">${q.q}</div>`;
+  if(q.img){ const img = document.createElement('img'); img.src = q.img; img.style.maxWidth='100%'; img.style.marginTop='8px'; qDiv.appendChild(img); }
+  const choices = document.createElement('div'); choices.className='choices';
+  q.choices.forEach((c,ci)=>{
+    const lab = document.createElement('label'); lab.className='choice';
+    const inp = document.createElement('input'); inp.type='radio'; inp.name='choice'; inp.value = ci; inp.style.marginRight='8px';
+    if(state.answers[state.index]===ci) inp.checked=true;
+    inp.addEventListener('change', ()=>{ state.answers[state.index]=ci; });
+    lab.appendChild(inp); lab.appendChild(document.createTextNode(`${String.fromCharCode(65+ci)}. ${c}`));
+    choices.appendChild(lab);
+  });
+  qDiv.appendChild(choices);
+  box.appendChild(qDiv);
+  // progress bar
+  const pct = Math.round((state.index / state.questions.length) * 100);
+  document.getElementById('progBar').style.width = pct + '%';
+}
+
+/* ========== Navigation ========== */
+document.getElementById('prevBtn').addEventListener('click', ()=>{ if(state.index>0){ state.index--; renderQuestion(); } });
+document.getElementById('nextBtn').addEventListener('click', ()=>{ if(state.index < state.questions.length-1){ state.index++; renderQuestion(); } });
+
+/* ========== Submit / scoring ========== */
+document.getElementById('submitBtn').addEventListener('click', ()=>{ if(confirm('Yakin ingin mengumpulkan?')) finishExam(); });
+
+function finishExam(){
+  // simple scoring
+  let correct = 0;
+  state.questions.forEach((q,i)=>{
+    if(state.answers[i] !== undefined && Number(state.answers[i]) === q.correct) correct++;
+  });
+  const total = state.questions.length;
+  const percent = Math.round(correct/total*100);
+  // hide exam, show result
+  document.getElementById('examArea').classList.add('hidden');
+  const res = document.getElementById('resultArea'); res.classList.remove('hidden');
+  document.getElementById('scoreBox').innerHTML = `<div><strong>Skor:</strong> ${correct} / ${total} (${percent}%)</div><div class="small" style="margin-top:8px">Nama: ${document.getElementById('nama').value || '-'} | Kelas: ${document.getElementById('kelas').value || '-'} | Nomor: ${document.getElementById('nomor').value || '-'}</div>`;
+  // store details for CSV / send
+  res._data = { correct, total, percent, student:document.getElementById('nama').value || '-', kelas:document.getElementById('kelas').value || '-', nomor:document.getElementById('nomor').value || '-', details: state.answers };
+}
+
+/* ========== Download CSV ========== */
+document.getElementById('downloadCsv').addEventListener('click', ()=>{
+  const data = document.getElementById('resultArea')._data || {};
+  let csv = 'nama,kelas,nomor,benar,total,percent\\n';
+  csv += `${data.student || ''},${data.kelas||''},${data.nomor||''},${data.correct||0},${data.total||0},${data.percent||0}\\n`;
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download = `${data.student || 'siswa'}_hasil.csv`; a.click(); URL.revokeObjectURL(url);
+});
+
+/* ========== Kirim ke Google Sheets ========== */
+document.getElementById('kirimServerBtn').addEventListener('click', async ()=>{
+  const data = document.getElementById('resultArea')._data || {};
+  if(!data.student){ alert('Nama belum diisi'); return; }
+  const payload = { nama: data.student, kelas: data.kelas, nomor: data.nomor, nilai: data.percent };
+  // send (no-cors mode used to avoid preflight; Apps Script will receive)
+  try{
+    await fetch(GOOGLE_WEBAPP_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    alert('Nilai dikirim ke guru (Google Sheet).');
+  }catch(e){ alert('Gagal mengirim nilai. Periksa koneksi.'); }
+});
+
+/* ========== Preview button ========== */
+document.getElementById('previewBtn').addEventListener('click', ()=>{
+  const preview = window.open('','_blank','width=700,height=800');
+  preview.document.write('<h3>Pratinjau 5 Soal Pertama</h3>');
+  QUESTIONS.slice(0,5).forEach((q,i)=>{ preview.document.write(`<div style="margin-bottom:12px"><b>${i+1}. ${q.q}</b><br>`); if(q.img) preview.document.write(`<img src="${q.img}" style="max-width:100%"><br>`); q.choices.forEach((c,ci)=>preview.document.write(`<div>${String.fromCharCode(65+ci)}. ${c}</div>`)); preview.document.write('</div>'); });
+});
+
+/* ========== Keyboard shortcuts for navigation ========== */
+document.addEventListener('keydown', e=>{
+  if(document.getElementById('examArea').classList.contains('hidden')) return;
+  if(e.key==='ArrowLeft') document.getElementById('prevBtn').click();
+  if(e.key==='ArrowRight') document.getElementById('nextBtn').click();
+});
+
+/* ========== Optional: auto-fill name label ========== */
+document.getElementById('nama').addEventListener('input', e=>{ document.getElementById('labelName').textContent = e.target.value || '-'; });
+
+/* ========== End script ========== */
+</script>
+
+</body>
+</html>
